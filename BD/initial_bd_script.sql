@@ -24,58 +24,56 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
-  `parent_category_id` bigint unsigned DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_categories_name` (`name`),
-  KEY `fk_categories_parent` (`parent_category_id`),
-  CONSTRAINT `fk_categories_parent` FOREIGN KEY (`parent_category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
+  UNIQUE KEY `uk_categories_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Volcando datos para la tabla retail_ia.categories: ~0 rows (aproximadamente)
 
--- Volcando estructura para tabla retail_ia.inventory_movements
-CREATE TABLE IF NOT EXISTS `inventory_movements` (
+-- Volcando estructura para tabla retail_ia.inventory_entries
+CREATE TABLE IF NOT EXISTS `inventory_entries` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `product_id` bigint unsigned NOT NULL,
-  `user_id` bigint unsigned DEFAULT NULL,
-  `movement_type` enum('IN_PURCHASE','OUT_SALE','OUT_SPOILAGE','ADJUSTMENT_ADD','ADJUSTMENT_SUB') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `quantity` int NOT NULL,
-  `movement_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `related_transaction_id` bigint unsigned DEFAULT NULL,
+  `user_id` bigint unsigned NOT NULL,
+  `quantity_received` int unsigned NOT NULL,
+  `entry_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expiration_date` date DEFAULT NULL,
+  `supplier_id` bigint unsigned DEFAULT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `fk_movements_product` (`product_id`),
-  KEY `fk_movements_user` (`user_id`),
-  CONSTRAINT `fk_movements_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
-  CONSTRAINT `fk_movements_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+  KEY `idx_inventory_entries_product` (`product_id`),
+  KEY `idx_inventory_entries_user` (`user_id`),
+  KEY `fk_inventory_supplier` (`supplier_id`),
+  CONSTRAINT `fk_inventory_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_inventory_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_inventory_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Volcando datos para la tabla retail_ia.inventory_movements: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla retail_ia.inventory_entries: ~0 rows (aproximadamente)
 
 -- Volcando estructura para tabla retail_ia.products
 CREATE TABLE IF NOT EXISTS `products` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `sku` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `upc` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
   `category_id` bigint unsigned DEFAULT NULL,
   `supplier_id` bigint unsigned DEFAULT NULL,
   `cost_price` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `regular_sale_price` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `unit_of_measure` enum('UNIT','KG','LITER') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'UNIT',
+  `sale_price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `unit_of_measure` enum('UNIT','KG') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'UNIT',
   `estimated_shelf_life_days` int unsigned DEFAULT NULL,
+  `current_stock` int NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_products_sku` (`sku`),
-  UNIQUE KEY `uk_products_upc` (`upc`),
   KEY `idx_products_name` (`name`),
-  KEY `fk_products_category` (`category_id`),
+  KEY `idx_products_category` (`category_id`),
   KEY `fk_products_supplier` (`supplier_id`),
   CONSTRAINT `fk_products_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_products_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL
@@ -83,39 +81,18 @@ CREATE TABLE IF NOT EXISTS `products` (
 
 -- Volcando datos para la tabla retail_ia.products: ~0 rows (aproximadamente)
 
--- Volcando estructura para tabla retail_ia.promotions
-CREATE TABLE IF NOT EXISTS `promotions` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` text COLLATE utf8mb4_unicode_ci,
-  `product_id` bigint unsigned DEFAULT NULL,
-  `category_id` bigint unsigned DEFAULT NULL,
-  `discount_percentage` decimal(5,2) DEFAULT NULL,
-  `start_date` timestamp NOT NULL,
-  `end_date` timestamp NOT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT '1',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `fk_promotions_product` (`product_id`),
-  KEY `fk_promotions_category` (`category_id`),
-  CONSTRAINT `fk_promotions_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_promotions_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Volcando datos para la tabla retail_ia.promotions: ~0 rows (aproximadamente)
-
 -- Volcando estructura para tabla retail_ia.sales_transactions
 CREATE TABLE IF NOT EXISTS `sales_transactions` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id` bigint unsigned DEFAULT NULL,
   `transaction_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `total_amount` decimal(12,2) NOT NULL,
-  `payment_method` enum('CASH','CREDIT_CARD','DEBIT_CARD','NEQUI','DAVIPLATA') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `payment_method` enum('CASH','CREDIT_CARD','DEBIT_CARD') COLLATE utf8mb4_unicode_ci DEFAULT 'CASH',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `fk_transactions_user` (`user_id`),
+  KEY `idx_sales_transactions_user` (`user_id`),
+  KEY `idx_sales_transactions_timestamp` (`transaction_timestamp`),
   CONSTRAINT `fk_transactions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -128,12 +105,11 @@ CREATE TABLE IF NOT EXISTS `sale_items` (
   `product_id` bigint unsigned NOT NULL,
   `quantity_sold` decimal(10,3) NOT NULL,
   `price_per_unit` decimal(10,2) NOT NULL,
-  `discount_applied` decimal(10,2) DEFAULT '0.00',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `fk_items_transaction` (`transaction_id`),
-  KEY `fk_items_product` (`product_id`),
+  KEY `idx_sale_items_transaction` (`transaction_id`),
+  KEY `idx_sale_items_product` (`product_id`),
   CONSTRAINT `fk_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_items_transaction` FOREIGN KEY (`transaction_id`) REFERENCES `sales_transactions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
